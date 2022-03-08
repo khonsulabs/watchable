@@ -41,24 +41,24 @@ impl<T> Watchable<T> {
             data: Arc::new(Data {
                 changed: Event::new(),
                 version: AtomicUsize::new(0),
-                sentinels: AtomicUsize::new(0),
+                watchers: AtomicUsize::new(0),
                 value: RwLock::new(initial_value),
             }),
         }
     }
 
-    /// Returns a new sentinel that can monitor for changes to the contained
+    /// Returns a new watcher that can monitor for changes to the contained
     /// value.
-    pub fn subscribe(&self) -> Sentinel<T> {
-        self.data.sentinels.fetch_add(1, Ordering::AcqRel);
-        Sentinel {
+    pub fn subscribe(&self) -> Watcher<T> {
+        self.data.watchers.fetch_add(1, Ordering::AcqRel);
+        Watcher {
             version: self.data.current_version(),
             watched: self.data.clone(),
         }
     }
 
     /// Replaces the current value contained and notifies all watching
-    /// [`Sentinel`]s. Returns the previously stored value.
+    /// [`Watcher`]s. Returns the previously stored value.
     pub fn replace(&self, new_value: T) -> T {
         let mut stored = self.data.value.write();
         let mut old_value = new_value;
@@ -87,7 +87,7 @@ impl<T> Watchable<T> {
     }
 
     /// Returns a write guard that allows updating the value. If the inner value
-    /// is accessed through [`DerefMut::deref_mut()`], all [`Sentinel`]s will be
+    /// is accessed through [`DerefMut::deref_mut()`], all [`Watcher`]s will be
     /// notified when the returned guard is dropped.
     pub fn write(&self) -> WatchableWriteGuard<'_, T> {
         WatchableWriteGuard {
@@ -97,16 +97,16 @@ impl<T> Watchable<T> {
         }
     }
 
-    /// Returns the number of [`Sentinel`]s for this value.
+    /// Returns the number of [`Watcher`]s for this value.
     #[must_use]
-    pub fn sentinels(&self) -> usize {
-        self.data.sentinels.load(Ordering::Acquire)
+    pub fn watchers(&self) -> usize {
+        self.data.watchers.load(Ordering::Acquire)
     }
 
-    /// Returns true if there are any [`Sentinel`]s for this value.
+    /// Returns true if there are any [`Watcher`]s for this value.
     #[must_use]
-    pub fn has_sentinels(&self) -> bool {
-        self.sentinels() > 0
+    pub fn has_watchers(&self) -> bool {
+        self.watchers() > 0
     }
 }
 
@@ -141,7 +141,7 @@ impl<'a, T> Deref for WatchableReadGuard<'a, T> {
 /// [`Watchable`].
 ///
 /// The inner value is readable through [`Deref`], and modifiable through
-/// [`DerefMut`]. Any usage of [`DerefMut`] will cause all [`Sentinel`]s to be
+/// [`DerefMut`]. Any usage of [`DerefMut`] will cause all [`Watcher`]s to be
 /// notified of an updated value when the guard is dropped.
 #[must_use]
 pub struct WatchableWriteGuard<'a, T> {
@@ -177,7 +177,7 @@ impl<'a, T> Drop for WatchableWriteGuard<'a, T> {
 struct Data<T> {
     changed: Event,
     version: AtomicUsize,
-    sentinels: AtomicUsize,
+    watchers: AtomicUsize,
     value: RwLock<T>,
 }
 
@@ -185,23 +185,23 @@ struct Data<T> {
 ///
 /// ## Cloning behavior
 ///
-/// Cloning a sentinel also clones the current watching state. If the sentinel
+/// Cloning a watcher also clones the current watching state. If the watcher
 /// hasn't seen the value currently stored, the cloned instance will also
 /// consider the current value unseen.
 #[derive(Debug, Clone)]
 #[must_use]
-pub struct Sentinel<T> {
+pub struct Watcher<T> {
     version: usize,
     watched: Arc<Data<T>>,
 }
 
-impl<T> Drop for Sentinel<T> {
+impl<T> Drop for Watcher<T> {
     fn drop(&mut self) {
-        self.watched.sentinels.fetch_sub(1, Ordering::AcqRel);
+        self.watched.watchers.fetch_sub(1, Ordering::AcqRel);
     }
 }
 
-impl<T> Sentinel<T> {
+impl<T> Watcher<T> {
     fn create_listener_if_needed(&self) -> Option<EventListener> {
         // Verify that we have the currently published version. To ensure
         // there's no race condition between querying the current version and
@@ -283,16 +283,16 @@ impl<T> Sentinel<T> {
         WatchableReadGuard(guard)
     }
 
-    /// Returns this sentinel in a type that implements [`Stream`].
-    pub fn into_stream(self) -> SentinelStream<T> {
-        SentinelStream {
-            sentinel: self,
+    /// Returns this watcher in a type that implements [`Stream`].
+    pub fn into_stream(self) -> WatcherStream<T> {
+        WatcherStream {
+            watcher: self,
             listener: None,
         }
     }
 }
 
-impl<T> Iterator for Sentinel<T>
+impl<T> Iterator for Watcher<T>
 where
     T: Clone,
 {
@@ -304,15 +304,15 @@ where
     }
 }
 
-/// Asynchronous iterator for a [`Sentinel`]. Implements [`Stream`].
+/// Asynchronous iterator for a [`Watcher`]. Implements [`Stream`].
 #[derive(Debug)]
 #[must_use]
-pub struct SentinelStream<T> {
-    sentinel: Sentinel<T>,
+pub struct WatcherStream<T> {
+    watcher: Watcher<T>,
     listener: Option<EventListener>,
 }
 
-impl<T> Stream for SentinelStream<T>
+impl<T> Stream for WatcherStream<T>
 where
     T: Clone,
 {
@@ -327,7 +327,7 @@ where
         if let Some(mut listener) = self
             .listener
             .take()
-            .or_else(|| self.sentinel.create_listener_if_needed())
+            .or_else(|| self.watcher.create_listener_if_needed())
         {
             match listener.poll_unpin(cx) {
                 Poll::Ready(_) => {
@@ -341,19 +341,19 @@ where
             }
         }
 
-        Poll::Ready(Some(self.sentinel.read().clone()))
+        Poll::Ready(Some(self.watcher.read().clone()))
     }
 }
 
 #[test]
 fn basics() {
     let watchable = Watchable::new(1_u32);
-    assert!(!watchable.has_sentinels());
+    assert!(!watchable.has_watchers());
     let mut watcher1 = watchable.subscribe();
     let mut watcher2 = watchable.subscribe();
     assert!(!watcher1.update_if_needed());
 
-    assert_eq!(watchable.sentinels(), 2);
+    assert_eq!(watchable.watchers(), 2);
     assert_eq!(watchable.replace(2), 1);
     // A call to watch should not block since the value has already been sent
     watcher1.watch();
@@ -365,13 +365,13 @@ fn basics() {
     assert_eq!(*watcher1.read(), 2);
     assert!(!watcher1.update_if_needed());
     drop(watcher1);
-    assert_eq!(watchable.sentinels(), 1);
+    assert_eq!(watchable.watchers(), 1);
 
     // Now, despite watcher1 having updated, watcher2 should have independent state
     assert!(watcher2.update_if_needed());
     assert_eq!(*watcher2.read(), 2);
     drop(watcher2);
-    assert_eq!(watchable.sentinels(), 0);
+    assert_eq!(watchable.watchers(), 0);
 }
 
 #[test]

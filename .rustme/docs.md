@@ -1,11 +1,17 @@
 Allows watching for value changes in both multi-threaded and asynchronous
 contexts.
 
+![watchable forbids unsafe code](https://img.shields.io/badge/unsafe-forbid-success)
+[![crate version](https://img.shields.io/crates/v/watchable.svg)](https://crates.io/crates/watchable)
+[![Live Build Status](https://img.shields.io/github/workflow/status/khonsulabs/watchable/Tests/main)](https://github.com/khonsulabs/watchable/actions?query=workflow:Tests)
+[![HTML Coverage Report for `main` branch](https://khonsulabs.github.io/watchable/coverage/badge.svg)](https://watchable.bonsaidb.io/coverage/)
+[![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://watchable.bonsaidb.io/main/watchable/)
+
 `watchable` is a Multi-Producer, Multi-Consumer channel where each consumer
 is only guaranteed to receive the most recently written value.
 
 ```rust
-$../examples/simple.rs$
+$../examples/simple.rs:example$
 ```
 
 When running this example, the output will look similar to:
@@ -22,22 +28,24 @@ Read value: 995
 Read value: 1000
 ```
 
-As you can see, the receiving thread doesn't receive every value. Each sentinel
+As you can see, the receiving thread doesn't receive every value. Each watcher
 is guaranteed to be notified when changes occur and is guaranteed to be able to
 retrieve the most recent value.
 
 ## Async Support
 
-The `Sentinel` type can be used in async code in multiple ways:
+The `Watcher` type can be used in async code in multiple ways:
 
-- `Sentinel::into_stream()`: Wraps the sentinel in a type that implements
+- `Watcher::into_stream()`: Wraps the watcher in a type that implements
   `futures::Stream`.
-- `Sentinel::wait_async().await`: Pauses execution of the current task until a
-  new value is available to be read. `Sentinel::read()` can be used to retrieve
+- `Watcher::wait_async().await`: Pauses execution of the current task until a
+  new value is available to be read. `Watcher::read()` can be used to retrieve
   the current value after `wait_async()` has returned.
 
-Here is the same example as above, except this time using `Sentinel::into_stream` with Tokio:
+Here is the same example as above, except this time using `Watcher::into_stream` with Tokio:
 
 ```rust
-$../examples/simple-async.rs$
+$../examples/simple-async.rs:example$
 ```
+
+`watchable` is compatible with all async runtimes.
