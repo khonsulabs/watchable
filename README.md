@@ -6,8 +6,8 @@ contexts.
 ![watchable forbids unsafe code](https://img.shields.io/badge/unsafe-forbid-success)
 [![crate version](https://img.shields.io/crates/v/watchable.svg)](https://crates.io/crates/watchable)
 [![Live Build Status](https://img.shields.io/github/workflow/status/khonsulabs/watchable/Tests/main)](https://github.com/khonsulabs/watchable/actions?query=workflow:Tests)
-[![HTML Coverage Report for `main` branch](https://khonsulabs.github.io/watchable/coverage/badge.svg)](https://watchable.bonsaidb.io/coverage/)
-[![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://watchable.bonsaidb.io/main/watchable/)
+[![HTML Coverage Report for `main` branch](https://khonsulabs.github.io/watchable/coverage/badge.svg)](https://khonsulabs.github.io/watchable/coverage/)
+[![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://khonsulabs.github.io/watchable/main/watchable/)
 
 `watchable` is a Multi-Producer, Multi-Consumer channel where each consumer
 is only guaranteed to receive the most recently written value.
