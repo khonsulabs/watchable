@@ -580,24 +580,24 @@
             <span class="ident">data</span>: <span class="ident">Arc::new</span>(<span class="ident">Data</span> {
                 <span class="ident">changed</span>: <span class="ident">Event::new</span>(),
                 <span class="ident">version</span>: <span class="ident">AtomicUsize::new</span>(<span class="number">0</span>),
-                <span class="ident">sentinels</span>: <span class="ident">AtomicUsize::new</span>(<span class="number">0</span>),
+                <span class="ident">watchers</span>: <span class="ident">AtomicUsize::new</span>(<span class="number">0</span>),
                 <span class="ident">value</span>: <span class="ident">RwLock::new</span>(<span class="ident">initial_value</span>),
             }),
         }
     }
 
-    <span class="doccomment">/// Returns a new sentinel that can monitor for changes to the contained</span>
+    <span class="doccomment">/// Returns a new watcher that can monitor for changes to the contained</span>
     <span class="doccomment">/// value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">sentinels</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">Ordering::AcqRel</span>);
-        <span class="ident">Sentinel</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">subscribe</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">watchers</span>.<span class="ident">fetch_add</span>(<span class="number">1</span>, <span class="ident">Ordering::AcqRel</span>);
+        <span class="ident">Watcher</span> {
             <span class="ident">version</span>: <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">current_version</span>(),
             <span class="ident">watched</span>: <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">clone</span>(),
         }
     }
 
     <span class="doccomment">/// Replaces the current value contained and notifies all watching</span>
-    <span class="doccomment">/// [`Sentinel`]s. Returns the previously stored value.</span>
+    <span class="doccomment">/// [`Watcher`]s. Returns the previously stored value.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">new_value</span>: <span class="ident">T</span>) -&gt; <span class="ident">T</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stored</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">value</span>.<span class="ident">write</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">old_value</span> <span class="op">=</span> <span class="ident">new_value</span>;
@@ -626,7 +626,7 @@
     }
 
     <span class="doccomment">/// Returns a write guard that allows updating the value. If the inner value</span>
-    <span class="doccomment">/// is accessed through [`DerefMut::deref_mut()`], all [`Sentinel`]s will be</span>
+    <span class="doccomment">/// is accessed through [`DerefMut::deref_mut()`], all [`Watcher`]s will be</span>
     <span class="doccomment">/// notified when the returned guard is dropped.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">WatchableWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">T</span><span class="op">&gt;</span> {
         <span class="ident">WatchableWriteGuard</span> {
@@ -636,16 +636,16 @@
         }
     }
 
-    <span class="doccomment">/// Returns the number of [`Sentinel`]s for this value.</span>
+    <span class="doccomment">/// Returns the number of [`Watcher`]s for this value.</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">sentinels</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">sentinels</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>)
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">watchers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
+        <span class="self">self</span>.<span class="ident">data</span>.<span class="ident">watchers</span>.<span class="ident">load</span>(<span class="ident">Ordering::Acquire</span>)
     }
 
-    <span class="doccomment">/// Returns true if there are any [`Sentinel`]s for this value.</span>
+    <span class="doccomment">/// Returns true if there are any [`Watcher`]s for this value.</span>
     <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_sentinels</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">sentinels</span>() <span class="op">&gt;</span> <span class="number">0</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_watchers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">watchers</span>() <span class="op">&gt;</span> <span class="number">0</span>
     }
 }
 
@@ -680,7 +680,7 @@
 <span class="doccomment">/// [`Watchable`].</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// The inner value is readable through [`Deref`], and modifiable through</span>
-<span class="doccomment">/// [`DerefMut`]. Any usage of [`DerefMut`] will cause all [`Sentinel`]s to be</span>
+<span class="doccomment">/// [`DerefMut`]. Any usage of [`DerefMut`] will cause all [`Watcher`]s to be</span>
 <span class="doccomment">/// notified of an updated value when the guard is dropped.</span>
 <span class="attribute">#[<span class="ident">must_use</span>]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WatchableWriteGuard</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> {
@@ -716,7 +716,7 @@
 <span class="kw">struct</span> <span class="ident">Data</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">changed</span>: <span class="ident">Event</span>,
     <span class="ident">version</span>: <span class="ident">AtomicUsize</span>,
-    <span class="ident">sentinels</span>: <span class="ident">AtomicUsize</span>,
+    <span class="ident">watchers</span>: <span class="ident">AtomicUsize</span>,
     <span class="ident">value</span>: <span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
 }
 
@@ -724,23 +724,23 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// ## Cloning behavior</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Cloning a sentinel also clones the current watching state. If the sentinel</span>
+<span class="doccomment">/// Cloning a watcher also clones the current watching state. If the watcher</span>
 <span class="doccomment">/// hasn&#39;t seen the value currently stored, the cloned instance will also</span>
 <span class="doccomment">/// consider the current value unseen.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="attribute">#[<span class="ident">must_use</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="ident">version</span>: <span class="ident">usize</span>,
     <span class="ident">watched</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Data</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">watched</span>.<span class="ident">sentinels</span>.<span class="ident">fetch_sub</span>(<span class="number">1</span>, <span class="ident">Ordering::AcqRel</span>);
+        <span class="self">self</span>.<span class="ident">watched</span>.<span class="ident">watchers</span>.<span class="ident">fetch_sub</span>(<span class="number">1</span>, <span class="ident">Ordering::AcqRel</span>);
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">create_listener_if_needed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EventListener</span><span class="op">&gt;</span> {
         <span class="comment">// Verify that we have the currently published version. To ensure</span>
         <span class="comment">// there&#39;s no race condition between querying the current version and</span>
@@ -822,16 +822,16 @@
         <span class="ident">WatchableReadGuard</span>(<span class="ident">guard</span>)
     }
 
-    <span class="doccomment">/// Returns this sentinel in a type that implements [`Stream`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_stream</span>(<span class="self">self</span>) -&gt; <span class="ident">SentinelStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">SentinelStream</span> {
-            <span class="ident">sentinel</span>: <span class="self">self</span>,
+    <span class="doccomment">/// Returns this watcher in a type that implements [`Stream`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_stream</span>(<span class="self">self</span>) -&gt; <span class="ident">WatcherStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+        <span class="ident">WatcherStream</span> {
+            <span class="ident">watcher</span>: <span class="self">self</span>,
             <span class="ident">listener</span>: <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Clone</span>,
 {
@@ -843,15 +843,15 @@
     }
 }
 
-<span class="doccomment">/// Asynchronous iterator for a [`Sentinel`]. Implements [`Stream`].</span>
+<span class="doccomment">/// Asynchronous iterator for a [`Watcher`]. Implements [`Stream`].</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="attribute">#[<span class="ident">must_use</span>]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SentinelStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">sentinel</span>: <span class="ident">Sentinel</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WatcherStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+    <span class="ident">watcher</span>: <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
     <span class="ident">listener</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EventListener</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">SentinelStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Stream</span> <span class="kw">for</span> <span class="ident">WatcherStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">T</span>: <span class="ident">Clone</span>,
 {
@@ -866,7 +866,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">listener</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">listener</span>
             .<span class="ident">take</span>()
-            .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">sentinel</span>.<span class="ident">create_listener_if_needed</span>())
+            .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">watcher</span>.<span class="ident">create_listener_if_needed</span>())
         {
             <span class="kw">match</span> <span class="ident">listener</span>.<span class="ident">poll_unpin</span>(<span class="ident">cx</span>) {
                 <span class="ident">Poll::Ready</span>(<span class="kw">_</span>) =&gt; {
@@ -880,19 +880,19 @@
             }
         }
 
-        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">sentinel</span>.<span class="ident">read</span>().<span class="ident">clone</span>()))
+        <span class="ident">Poll::Ready</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">watcher</span>.<span class="ident">read</span>().<span class="ident">clone</span>()))
     }
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">fn</span> <span class="ident">basics</span>() {
     <span class="kw">let</span> <span class="ident">watchable</span> <span class="op">=</span> <span class="ident">Watchable::new</span>(<span class="number">1_u32</span>);
-    <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">watchable</span>.<span class="ident">has_sentinels</span>());
+    <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">watchable</span>.<span class="ident">has_watchers</span>());
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">watcher1</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">subscribe</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">watcher2</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">subscribe</span>();
     <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">watcher1</span>.<span class="ident">update_if_needed</span>());
 
-    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">sentinels</span>(), <span class="number">2</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">watchers</span>(), <span class="number">2</span>);
     <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">replace</span>(<span class="number">2</span>), <span class="number">1</span>);
     <span class="comment">// A call to watch should not block since the value has already been sent</span>
     <span class="ident">watcher1</span>.<span class="ident">watch</span>();
@@ -904,13 +904,13 @@
     <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">watcher1</span>.<span class="ident">read</span>(), <span class="number">2</span>);
     <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">watcher1</span>.<span class="ident">update_if_needed</span>());
     <span class="ident">drop</span>(<span class="ident">watcher1</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">sentinels</span>(), <span class="number">1</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">watchers</span>(), <span class="number">1</span>);
 
     <span class="comment">// Now, despite watcher1 having updated, watcher2 should have independent state</span>
     <span class="macro">assert!</span>(<span class="ident">watcher2</span>.<span class="ident">update_if_needed</span>());
     <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">watcher2</span>.<span class="ident">read</span>(), <span class="number">2</span>);
     <span class="ident">drop</span>(<span class="ident">watcher2</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">sentinels</span>(), <span class="number">0</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">watchable</span>.<span class="ident">watchers</span>(), <span class="number">0</span>);
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
