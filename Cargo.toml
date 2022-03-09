@@ -2,11 +2,19 @@
 name = "watchable"
 version = "0.1.0"
 edition = "2021"
+description = "Allows watching for value changes in both multi-threaded and asynchronous contexts."
+repository = "https://github.com/khonsulabs/watchable"
+license = "MIT OR Apache-2.0"
+keywords = ["asynchronous", "async", "thread", "mpmc"]
+categories = ["concurrency", "data-structures", "asynchronous"]
+readme = "./README.md"
+rust-version = "1.58"
 
 [dependencies]
 event-listener = "2.5.2"
 parking_lot = "0.12.0"
 futures-util = "0.3.21"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 tokio = { version = "1.16.1", default-features = false, features = [
