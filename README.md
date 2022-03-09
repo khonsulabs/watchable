@@ -1,7 +1,7 @@
 # Watchable
 
-Allows watching for value changes in both multi-threaded and asynchronous
-contexts.
+Enables watching for value changes in both multi-threaded and asynchronous
+contexts. Similar to [tokio::sync::watch][tokio-watch], but able to work in non-async codebases.
 
 ![watchable forbids unsafe code](https://img.shields.io/badge/unsafe-forbid-success)
 [![crate version](https://img.shields.io/crates/v/watchable.svg)](https://crates.io/crates/watchable)
@@ -124,6 +124,8 @@ async fn watching_task(watcher: Watcher<u32>) {
 ```
 
 `watchable` is compatible with all async runtimes.
+
+[tokio-watch]: https://docs.rs/tokio/latest/tokio/sync/watch/index.html
 
 ## Open-source Licenses
 

@@ -24,5 +24,11 @@ Configuration(
     },
     glossaries: [
         "https://github.com/khonsulabs/.github/raw/main/snippets/glossary.ron",
+        {
+            "docs": (
+                default: "https://khonsulabs.github.io/watchable/main/watchable/",
+                release: "https://docs.rs/watchable/latest/watchable/",
+            ),
+        }
     ],
 )
