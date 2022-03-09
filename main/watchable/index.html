@@ -1,44 +1,49 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Allows watching for value changes in both multi-threaded and asynchronous contexts."><meta name="keywords" content="rust, rustlang, rust-lang, watchable"><title>watchable - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../dark.css" disabled><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../storage.js"></script><script src="../crates.js"></script><script defer src="../main.js"></script>
     <noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../favicon.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../watchable/index.html"><div class="logo-container"><img class="rust-logo" src="../rust-logo.png" alt="logo"></div>
-        </a><h2 class="location">Crate watchable</h2><div class="block version"><div class="narrow-helper"></div><p>Version 0.1.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all watchable's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li></ul></div><div id="sidebar-vars" data-name="watchable" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../watchable/index.html"><img class="rust-logo" src="../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">watchable</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/watchable/lib.rs.html#1-537" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Allows watching for value changes in both multi-threaded and asynchronous
+        </a><h2 class="location">Crate watchable</h2><div class="block version"><div class="narrow-helper"></div><p>Version 0.1.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all watchable's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><div id="sidebar-vars" data-name="watchable" data-ty="mod" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../watchable/index.html"><img class="rust-logo" src="../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><h1 class="fqn"><span class="in-band">Crate <a class="mod" href="#">watchable</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/watchable/lib.rs.html#1-815" title="goto source code">[src]</a></span></h1><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Allows watching for value changes in both multi-threaded and asynchronous
 contexts.</p>
 <p><img src="https://img.shields.io/badge/unsafe-forbid-success" alt="watchable forbids unsafe code" />
 <a href="https://crates.io/crates/watchable"><img src="https://img.shields.io/crates/v/watchable.svg" alt="crate version" /></a>
 <a href="https://github.com/khonsulabs/watchable/actions?query=workflow:Tests"><img src="https://img.shields.io/github/workflow/status/khonsulabs/watchable/Tests/main" alt="Live Build Status" /></a>
-<a href="https://watchable.bonsaidb.io/coverage/"><img src="https://khonsulabs.github.io/watchable/coverage/badge.svg" alt="HTML Coverage Report for main branch" /></a>
-<a href="https://watchable.bonsaidb.io/main/watchable/"><img src="https://img.shields.io/badge/docs-main-informational" alt="Documentation for main branch" /></a></p>
+<a href="https://khonsulabs.github.io/watchable/coverage/"><img src="https://khonsulabs.github.io/watchable/coverage/badge.svg" alt="HTML Coverage Report for main branch" /></a>
+<a href="https://khonsulabs.github.io/watchable/main/watchable/"><img src="https://img.shields.io/badge/docs-main-informational" alt="Documentation for main branch" /></a></p>
 <p><code>watchable</code> is a Multi-Producer, Multi-Consumer channel where each consumer
 is only guaranteed to receive the most recently written value.</p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">watchable</span>::{<span class="ident">Watchable</span>, <span class="ident">Watcher</span>};
 
 <span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="comment">// Create the watchable container for our u32s.</span>
-    <span class="kw">let</span> <span class="ident">watchable</span> <span class="op">=</span> <span class="ident">Watchable::new</span>(<span class="number">0</span>);
-    <span class="comment">// Create a subscriber that watches for changes to the stored value.</span>
-    <span class="kw">let</span> <span class="ident">watcher</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">subscribe</span>();
-    <span class="comment">// Spawn a background worker that will print out the values it reads.</span>
+    <span class="comment">// Create a Watchable&lt;u32&gt; which holds a u32 and notifies watchers when the</span>
+    <span class="comment">// contained value changes.</span>
+    <span class="kw">let</span> <span class="ident">watchable</span> <span class="op">=</span> <span class="ident">Watchable::default</span>();
+    <span class="comment">// Create a watcher that will efficiently be able to monitor and read the</span>
+    <span class="comment">// contained value as it is updated.</span>
+    <span class="kw">let</span> <span class="ident">watcher</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">watch</span>();
+    <span class="comment">// Spawn a background worker that will print out the values the watcher reads.</span>
     <span class="kw">let</span> <span class="ident">watching_thread</span> <span class="op">=</span> <span class="ident">std::thread::spawn</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">watching_thread</span>(<span class="ident">watcher</span>));
 
-    <span class="comment">// Send a sequence of numbers, ending at 1,000.</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="op">=</span><span class="number">1000</span> {
+    <span class="comment">// Store a sequence of values. Each time a new value is written, any waiting</span>
+    <span class="comment">// watchers will be notified there is a new value available.</span>
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1_u32</span>..<span class="op">=</span><span class="number">1000</span> {
         <span class="ident">watchable</span>.<span class="ident">replace</span>(<span class="ident">i</span>);
     }
+
+    <span class="comment">// Once we&#39;re done sending values, dropping the Watchable will ensure</span>
+    <span class="comment">// watchers are notified of the disconnection. Watchers are guaranteed to be</span>
+    <span class="comment">// able to read the final value.</span>
+    <span class="ident">drop</span>(<span class="ident">watchable</span>);
 
     <span class="comment">// Wait for the thread to exit.</span>
     <span class="ident">watching_thread</span>.<span class="ident">join</span>().<span class="ident">unwrap</span>();
 }
 
 <span class="kw">fn</span> <span class="ident">watching_thread</span>(<span class="ident">watcher</span>: <span class="ident">Watcher</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>) {
-    <span class="comment">// A Watcher can be used as an iterator which always produces the most</span>
+    <span class="comment">// A Watcher can be used as an iterator which always reads the most</span>
     <span class="comment">// recent value, or parks the current thread until a new value is available.</span>
     <span class="kw">for</span> <span class="ident">value</span> <span class="kw">in</span> <span class="ident">watcher</span> {
-        <span class="comment">// The value we received will not necessarily be sequential, even though</span>
-        <span class="comment">// the main thread is publishing a complete sequence.</span>
+        <span class="comment">// The value we read will not necessarily be sequential, even though the</span>
+        <span class="comment">// main thread is storing a complete sequence.</span>
         <span class="macro">println!</span>(<span class="string">&quot;Read value: {value}&quot;</span>);
-        <span class="kw">if</span> <span class="ident">value</span> <span class="op">==</span> <span class="number">1000</span> {
-            <span class="kw">break</span>;
-        }
     }
 }</code></pre></div>
 <p>When running this example, the output will look similar to:</p>
@@ -70,19 +75,27 @@ the current value after <code>wait_async()</code> has returned.</li>
 
 <span class="attribute">#[<span class="ident">tokio::main</span>]</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() {
-    <span class="comment">// Create the watchable container for our u32s.</span>
-    <span class="kw">let</span> <span class="ident">watchable</span> <span class="op">=</span> <span class="ident">Watchable::new</span>(<span class="number">0</span>);
-    <span class="comment">// Create a subscriber that watches for changes to the stored value.</span>
-    <span class="kw">let</span> <span class="ident">watcher</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">subscribe</span>();
-    <span class="comment">// Spawn a background worker that will print out the values it reads.</span>
+    <span class="comment">// Create a Watchable&lt;u32&gt; which holds a u32 and notifies watchers when the</span>
+    <span class="comment">// contained value changes.</span>
+    <span class="kw">let</span> <span class="ident">watchable</span> <span class="op">=</span> <span class="ident">Watchable::default</span>();
+    <span class="comment">// Create a watcher that will efficiently be able to monitor and read the</span>
+    <span class="comment">// contained value as it is updated.</span>
+    <span class="kw">let</span> <span class="ident">watcher</span> <span class="op">=</span> <span class="ident">watchable</span>.<span class="ident">watch</span>();
+    <span class="comment">// Spawn a background worker that will print out the values the watcher reads.</span>
     <span class="kw">let</span> <span class="ident">watching_task</span> <span class="op">=</span> <span class="ident">tokio::task::spawn</span>(<span class="ident">watching_task</span>(<span class="ident">watcher</span>));
 
-    <span class="comment">// Send a sequence of numbers, ending at 1,000.</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="op">=</span><span class="number">1000</span> {
+    <span class="comment">// Store a sequence of values. Each time a new value is written, any waiting</span>
+    <span class="comment">// watchers will be notified there is a new value available.</span>
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1_u32</span>..<span class="op">=</span><span class="number">1000</span> {
         <span class="ident">watchable</span>.<span class="ident">replace</span>(<span class="ident">i</span>);
     }
 
-    <span class="comment">// Wait for the thread to exit.</span>
+    <span class="comment">// Once we&#39;re done sending values, dropping the Watchable will ensure</span>
+    <span class="comment">// watchers are notified of the disconnection. Watchers are guaranteed to be</span>
+    <span class="comment">// able to read the final value.</span>
+    <span class="ident">drop</span>(<span class="ident">watchable</span>);
+
+    <span class="comment">// Wait for the spawned task to exit.</span>
     <span class="ident">watching_task</span>.<span class="kw">await</span>.<span class="ident">unwrap</span>();
 }
 
@@ -94,9 +107,6 @@ the current value after <code>wait_async()</code> has returned.</li>
         <span class="comment">// The value we received will not necessarily be sequential, even though</span>
         <span class="comment">// the main thread is publishing a complete sequence.</span>
         <span class="macro">println!</span>(<span class="string">&quot;Read value: {value}&quot;</span>);
-        <span class="kw">if</span> <span class="ident">value</span> <span class="op">==</span> <span class="number">1000</span> {
-            <span class="kw">break</span>;
-        }
     }
 }</code></pre></div>
 <p><code>watchable</code> is compatible with all async runtimes.</p>
@@ -106,7 +116,9 @@ open-source. This repository is available under the <a href="./LICENSE-MIT">MIT 
 or the <a href="./LICENSE-APACHE">Apache License 2.0</a>.</p>
 <p>To learn more about contributing, please see <a href="./CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
 </div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2>
-<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Watchable.html" title="watchable::Watchable struct">Watchable</a></div><div class="item-right docblock-short"><p>A watchable wrapper for a value.</p>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Disconnected.html" title="watchable::Disconnected struct">Disconnected</a></div><div class="item-right docblock-short"><p>A watch operation failed because all <a href="struct.Watchable.html" title="Watchable"><code>Watchable</code></a> instances have been
+dropped.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Watchable.html" title="watchable::Watchable struct">Watchable</a></div><div class="item-right docblock-short"><p>A watchable wrapper for a value.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.WatchableReadGuard.html" title="watchable::WatchableReadGuard struct">WatchableReadGuard</a></div><div class="item-right docblock-short"><p>A read guard that allows reading the currently stored value in a
 <a href="struct.Watchable.html" title="Watchable"><code>Watchable</code></a>. No values can be stored within the source <a href="struct.Watchable.html" title="Watchable"><code>Watchable</code></a> while
 this guard exists.</p>
@@ -114,5 +126,7 @@ this guard exists.</p>
 <a href="struct.Watchable.html" title="Watchable"><code>Watchable</code></a>.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.Watcher.html" title="watchable::Watcher struct">Watcher</a></div><div class="item-right docblock-short"><p>An observer of a <a href="struct.Watchable.html" title="Watchable"><code>Watchable</code></a> value.</p>
 </div></div><div class="item-row"><div class="item-left module-item"><a class="struct" href="struct.WatcherStream.html" title="watchable::WatcherStream struct">WatcherStream</a></div><div class="item-right docblock-short"><p>Asynchronous iterator for a <a href="struct.Watcher.html" title="Watcher"><code>Watcher</code></a>. Implements [<code>Stream</code>].</p>
+</div></div></div><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2>
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.TimeoutError.html" title="watchable::TimeoutError enum">TimeoutError</a></div><div class="item-right docblock-short"><p>A watch operation with a timeout failed.</p>
 </div></div></div></section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../" data-current-crate="watchable" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
 </body></html>
