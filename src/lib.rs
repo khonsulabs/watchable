@@ -111,12 +111,31 @@ impl<T> Watchable<T> {
     /// Returns a write guard that allows updating the value. If the inner value
     /// is accessed through [`DerefMut::deref_mut()`], all [`Watcher`]s will be
     /// notified when the returned guard is dropped.
+    ///
+    /// [`WatchableWriteGuard`] holds an exclusive lock. No other threads will
+    /// be able to read or write the contained value until the guard is dropped.
     pub fn write(&self) -> WatchableWriteGuard<'_, T> {
         WatchableWriteGuard {
             watchable: self,
             guard: self.data.value.write(),
             accessed_mut: false,
         }
+    }
+
+    /// Returns a guard which can be used to access the value held within the
+    /// variable. This guard does not block other threads from reading the
+    /// value.
+    pub fn read(&self) -> WatchableReadGuard<'_, T> {
+        WatchableReadGuard(self.data.value.read())
+    }
+
+    /// Returns the currently contained value.
+    #[must_use]
+    pub fn get(&self) -> T
+    where
+        T: Clone,
+    {
+        self.data.value.read().clone()
     }
 
     /// Returns the number of [`Watcher`]s for this value.
@@ -168,6 +187,9 @@ impl<'a, T> Deref for WatchableReadGuard<'a, T> {
 /// The inner value is readable through [`Deref`], and modifiable through
 /// [`DerefMut`]. Any usage of [`DerefMut`] will cause all [`Watcher`]s to be
 /// notified of an updated value when the guard is dropped.
+///
+/// [`WatchableWriteGuard`] is an exclusive guard. No other threads will be
+/// able to read or write the contained value until the guard is dropped.
 #[must_use]
 pub struct WatchableWriteGuard<'a, T> {
     watchable: &'a Watchable<T>,
@@ -424,6 +446,17 @@ impl<T> Watcher<T> {
         WatchableReadGuard(guard)
     }
 
+    /// Returns the currently contained value. This function marks the stored
+    /// value as read, ensuring that the next call to a watch function will
+    /// block until the a new value has been published.
+    #[must_use]
+    pub fn get(&mut self) -> T
+    where
+        T: Clone,
+    {
+        self.read().clone()
+    }
+
     /// Watches for a new value to be stored in the source [`Watchable`] and
     /// returns a clone of it. If the current value hasn't been accessed through
     /// [`Self::read()`] or marked read with [`Self::mark_read()`], this call
@@ -564,6 +597,18 @@ fn basics() {
     assert_eq!(*watcher2.read(), 2);
     drop(watcher2);
     assert_eq!(watchable.watchers(), 0);
+}
+
+#[test]
+fn accessing_values() {
+    let watchable = Watchable::new(String::from("hello"));
+    assert_eq!(watchable.get(), "hello");
+    assert_eq!(&*watchable.read(), "hello");
+    assert_eq!(&*watchable.write(), "hello");
+
+    let mut watcher = watchable.watch();
+    assert_eq!(watcher.get(), "hello");
+    assert_eq!(&*watcher.read(), "hello");
 }
 
 #[test]
