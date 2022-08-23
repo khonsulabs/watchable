@@ -1,8 +1,8 @@
 [package]
 name = "watchable"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-description = "Allows watching for value changes in both multi-threaded and asynchronous contexts."
+description = "A watchable RwLock-like type that is compatible with both multi-threaded and async code."
 repository = "https://github.com/khonsulabs/watchable"
 license = "MIT OR Apache-2.0"
 keywords = ["asynchronous", "async", "thread", "mpmc"]

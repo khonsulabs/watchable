@@ -1,7 +1,8 @@
 # Watchable
 
-Enables watching for value changes in both multi-threaded and asynchronous
-contexts. Similar to [tokio::sync::watch][tokio-watch], but able to work in non-async codebases.
+`watchable` implements an observable RwLock-like type that is compatible with
+both multi-threaded and async code. Inspired by
+[tokio::sync::watch][tokio-watch].
 
 ![watchable forbids unsafe code](https://img.shields.io/badge/unsafe-forbid-success)
 [![crate version](https://img.shields.io/crates/v/watchable.svg)](https://crates.io/crates/watchable)
@@ -9,8 +10,9 @@ contexts. Similar to [tokio::sync::watch][tokio-watch], but able to work in non-
 [![HTML Coverage Report for `main` branch](https://khonsulabs.github.io/watchable/coverage/badge.svg)](https://khonsulabs.github.io/watchable/coverage/)
 [![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://khonsulabs.github.io/watchable/main/watchable/)
 
-`watchable` is a Multi-Producer, Multi-Consumer channel where each consumer
-is only guaranteed to receive the most recently written value.
+`watchable` is an RwLock-like type that allows watching for value changes
+using a Multi-Producer, Multi-Consumer approach where each consumer is only
+guaranteed to receive the most recently written value.
 
 ```rust
 use watchable::{Watchable, Watcher};
