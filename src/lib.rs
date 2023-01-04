@@ -43,10 +43,7 @@ impl<T> Drop for Watchable<T> {
     fn drop(&mut self) {
         if self.data.watchables.fetch_sub(1, Ordering::AcqRel) == 1 {
             // Last watchable
-            let mut changed = self.data.changed.write();
-            if let Some(changed) = changed.take() {
-                changed.notify(usize::MAX);
-            }
+            self.shutdown();
         }
     }
 }
@@ -149,6 +146,18 @@ impl<T> Watchable<T> {
     pub fn has_watchers(&self) -> bool {
         self.watchers() > 0
     }
+
+    /// Disconnects all [`Watcher`]s.
+    ///
+    /// All future value updates will not be observed by the watchers, but the
+    /// last value will still be readable before the watcher signals that it is
+    /// disconnected.
+    pub fn shutdown(&self) {
+        let mut changed = self.data.changed.write();
+        if let Some(changed) = changed.take() {
+            changed.notify(usize::MAX);
+        }
+    }
 }
 
 impl<T> Data<T> {
@@ -177,7 +186,7 @@ impl<'a, T> Deref for WatchableReadGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
@@ -201,14 +210,14 @@ impl<'a, T> Deref for WatchableWriteGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &*self.guard
+        &self.guard
     }
 }
 
 impl<'a, T> DerefMut for WatchableWriteGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.accessed_mut = true;
-        &mut *self.guard
+        &mut self.guard
     }
 }
 
@@ -857,4 +866,20 @@ async fn stress_test_async() {
     for worker in workers {
         worker.await.unwrap();
     }
+}
+
+#[test]
+fn shutdown() {
+    let watchable = Watchable::new(0);
+    let mut watcher = watchable.watch();
+
+    // Set a new value, then shutdown
+    watchable.replace(1);
+    watchable.shutdown();
+
+    // The value should still be accessible
+    assert_eq!(watcher.next_value().expect("initial value missing"), 1);
+    watcher
+        .next_value()
+        .expect_err("watcher should be disconnected");
 }
