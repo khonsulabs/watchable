@@ -8,7 +8,7 @@ both multi-threaded and async code. Inspired by
 [![crate version](https://img.shields.io/crates/v/watchable.svg)](https://crates.io/crates/watchable)
 [![Live Build Status](https://img.shields.io/github/actions/workflow/status/khonsulabs/watchable/tests.yml?branch=main)](https://github.com/khonsulabs/watchable/actions?query=workflow:Tests)
 [![HTML Coverage Report for `main` branch](https://khonsulabs.github.io/watchable/coverage/badge.svg)](https://khonsulabs.github.io/watchable/coverage/)
-[![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://khonsulabs.github.io/watchable/main/watchable/)
+[![Documentation for `main` branch](https://img.shields.io/badge/docs-main-informational)](https://docs.rs/watchable/latest/watchable/)
 
 `watchable` is an RwLock-like type that allows watching for value changes
 using a Multi-Producer, Multi-Consumer approach where each consumer is only
