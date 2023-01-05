@@ -883,6 +883,10 @@
 <span id="883">883</span>
 <span id="884">884</span>
 <span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
 </pre><pre class="rust"><code><span class="attribute">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;.crate-docs.md&quot;</span>)]
 #![forbid(unsafe_code)]
 #![warn(
@@ -1185,13 +1189,21 @@
 <span class="kw">impl</span>&lt;T&gt; Watcher&lt;T&gt; {
     <span class="kw">fn </span>create_listener_if_needed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EventListener, CreateListenerError&gt; {
         <span class="kw">let </span>changed = <span class="self">self</span>.watched.changed.read();
-        <span class="kw">match </span>(
-            changed.as_ref(),
-            <span class="self">self</span>.watched.current_version() == <span class="self">self</span>.version,
-        ) {
+        <span class="kw">match </span>(changed.as_ref(), <span class="self">self</span>.is_current()) {
             (<span class="kw">_</span>, <span class="bool-val">false</span>) =&gt; <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable),
             (<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(CreateListenerError::Disconnected),
-            (<span class="prelude-val">Some</span>(changed), <span class="bool-val">true</span>) =&gt; <span class="prelude-val">Ok</span>(changed.listen()),
+            (<span class="prelude-val">Some</span>(changed), <span class="bool-val">true</span>) =&gt; {
+                <span class="kw">let </span>listener = changed.listen();
+
+                <span class="comment">// Between now and creating the listener, an update may have
+                // come in, so we need to check again before returning the
+                // listener.
+                </span><span class="kw">if </span><span class="self">self</span>.is_current() {
+                    <span class="prelude-val">Ok</span>(listener)
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable)
+                }
+            }
         }
     }
 
@@ -1227,16 +1239,19 @@
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
     </span><span class="kw">pub fn </span>watch(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Disconnected&gt; {
-        <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
-            <span class="prelude-val">Ok</span>(listener) =&gt; {
-                listener.wait();
-                <span class="kw">if </span><span class="self">self</span>.is_current() {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected);
+        <span class="kw">loop </span>{
+            <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
+                <span class="prelude-val">Ok</span>(listener) =&gt; {
+                    listener.wait();
+                    <span class="kw">if </span>!<span class="self">self</span>.is_current() {
+                        <span class="kw">break</span>;
+                    }
                 }
+                <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected),
+                <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; <span class="kw">break</span>,
             }
-            <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected),
-            <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; {}
         }
+
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1253,21 +1268,7 @@
     /// - [`TimeoutError::Timeout`]: A timeout occurred before a new value was
     /// written.
     </span><span class="kw">pub fn </span>watch_timeout(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: Duration) -&gt; <span class="prelude-ty">Result</span>&lt;(), TimeoutError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
-            <span class="prelude-val">Ok</span>(listener) =&gt; {
-                <span class="kw">if </span>listener.wait_timeout(duration) {
-                    <span class="kw">if </span><span class="self">self</span>.is_current() {
-                        <span class="prelude-val">Err</span>(TimeoutError::Disconnected)
-                    } <span class="kw">else </span>{
-                        <span class="prelude-val">Ok</span>(())
-                    }
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Err</span>(TimeoutError::Timeout)
-                }
-            }
-            <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="prelude-val">Err</span>(TimeoutError::Disconnected),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(()),
-        }
+        <span class="self">self</span>.watch_until(Instant::now() + duration)
     }
 
     <span class="doccomment">/// Watches for a new value to be stored in the source [`Watchable`]. If the
@@ -1282,21 +1283,25 @@
     /// - [`TimeoutError::Timeout`]: A timeout occurred before a new value was
     /// written.
     </span><span class="kw">pub fn </span>watch_until(<span class="kw-2">&amp;</span><span class="self">self</span>, deadline: Instant) -&gt; <span class="prelude-ty">Result</span>&lt;(), TimeoutError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
-            <span class="prelude-val">Ok</span>(listener) =&gt; {
-                <span class="kw">if </span>listener.wait_deadline(deadline) {
-                    <span class="kw">if </span><span class="self">self</span>.is_current() {
-                        <span class="prelude-val">Err</span>(TimeoutError::Disconnected)
+        <span class="kw">loop </span>{
+            <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
+                <span class="prelude-val">Ok</span>(listener) =&gt; {
+                    <span class="kw">if </span>listener.wait_deadline(deadline) {
+                        <span class="kw">if </span>!<span class="self">self</span>.is_current() {
+                            <span class="kw">break</span>;
+                        } <span class="kw">else if </span>Instant::now() &lt; deadline {
+                            <span class="comment">// Spurious wake-up
+                        </span>}
                     } <span class="kw">else </span>{
-                        <span class="prelude-val">Ok</span>(())
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(TimeoutError::Timeout);
                     }
-                } <span class="kw">else </span>{
-                    <span class="prelude-val">Err</span>(TimeoutError::Timeout)
                 }
+                <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(TimeoutError::Disconnected),
+                <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; <span class="kw">break</span>,
             }
-            <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="prelude-val">Err</span>(TimeoutError::Disconnected),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(()),
         }
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Watches for a new value to be stored in the source [`Watchable`]. If the
@@ -1309,15 +1314,17 @@
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
     </span><span class="kw">pub async fn </span>watch_async(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Disconnected&gt; {
-        <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
-            <span class="prelude-val">Ok</span>(listener) =&gt; {
-                listener.<span class="kw">await</span>;
-                <span class="kw">if </span><span class="self">self</span>.is_current() {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected);
+        <span class="kw">loop </span>{
+            <span class="kw">match </span><span class="self">self</span>.create_listener_if_needed() {
+                <span class="prelude-val">Ok</span>(listener) =&gt; {
+                    listener.<span class="kw">await</span>;
+                    <span class="kw">if </span>!<span class="self">self</span>.is_current() {
+                        <span class="kw">break</span>;
+                    }
                 }
+                <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected),
+                <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; <span class="kw">break</span>,
             }
-            <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Disconnected),
-            <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; {}
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -1433,31 +1440,32 @@
     ) -&gt; Poll&lt;<span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt;&gt; {
         <span class="comment">// If we have a listener or we have already read the current value, we
         // need to poll the listener as a future first.
-        </span><span class="kw">match </span><span class="self">self
-            </span>.listener
-            .take()
-            .ok_or(CreateListenerError::Disconnected)
-            .or_else(|<span class="kw">_</span>| <span class="self">self</span>.watcher.create_listener_if_needed())
-        {
-            <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>listener) =&gt; {
-                <span class="kw">match </span>listener.poll_unpin(cx) {
-                    Poll::Ready(<span class="kw">_</span>) =&gt; {
-                        <span class="kw">if </span><span class="self">self</span>.watcher.version == <span class="self">self</span>.watcher.watched.current_version() {
-                            <span class="comment">// Disconnected
-                            </span><span class="kw">return </span>Poll::Ready(<span class="prelude-val">None</span>);
-                        }
+        </span><span class="kw">loop </span>{
+            <span class="kw">match </span><span class="self">self
+                </span>.listener
+                .take()
+                .ok_or(CreateListenerError::Disconnected)
+                .or_else(|<span class="kw">_</span>| <span class="self">self</span>.watcher.create_listener_if_needed())
+            {
+                <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>listener) =&gt; {
+                    <span class="kw">match </span>listener.poll_unpin(cx) {
+                        Poll::Ready(<span class="kw">_</span>) =&gt; {
+                            <span class="kw">if </span>!<span class="self">self</span>.watcher.is_current() {
+                                <span class="kw">break</span>;
+                            }
 
-                        <span class="comment">// A new value is available. Fall through.
-                    </span>}
-                    Poll::Pending =&gt; {
-                        <span class="comment">// The listener wasn&#39;t ready, store it again.
-                        </span><span class="self">self</span>.listener = <span class="prelude-val">Some</span>(listener);
-                        <span class="kw">return </span>Poll::Pending;
+                            <span class="comment">// A new value is available. Fall through.
+                        </span>}
+                        Poll::Pending =&gt; {
+                            <span class="comment">// The listener wasn&#39;t ready, store it again.
+                            </span><span class="self">self</span>.listener = <span class="prelude-val">Some</span>(listener);
+                            <span class="kw">return </span>Poll::Pending;
+                        }
                     }
                 }
+                <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; <span class="kw">break</span>,
+                <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span>Poll::Ready(<span class="prelude-val">None</span>),
             }
-            <span class="prelude-val">Err</span>(CreateListenerError::NewValueAvailable) =&gt; {}
-            <span class="prelude-val">Err</span>(CreateListenerError::Disconnected) =&gt; <span class="kw">return </span>Poll::Ready(<span class="prelude-val">None</span>),
         }
 
         Poll::Ready(<span class="prelude-val">Some</span>(<span class="self">self</span>.watcher.read().clone()))
