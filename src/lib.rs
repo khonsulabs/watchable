@@ -300,13 +300,21 @@ pub enum TimeoutError {
 impl<T> Watcher<T> {
     fn create_listener_if_needed(&self) -> Result<EventListener, CreateListenerError> {
         let changed = self.watched.changed.read();
-        match (
-            changed.as_ref(),
-            self.watched.current_version() == self.version,
-        ) {
+        match (changed.as_ref(), self.is_current()) {
             (_, false) => Err(CreateListenerError::NewValueAvailable),
             (None, _) => Err(CreateListenerError::Disconnected),
-            (Some(changed), true) => Ok(changed.listen()),
+            (Some(changed), true) => {
+                let listener = changed.listen();
+
+                // Between now and creating the listener, an update may have
+                // come in, so we need to check again before returning the
+                // listener.
+                if self.is_current() {
+                    Ok(listener)
+                } else {
+                    Err(CreateListenerError::NewValueAvailable)
+                }
+            }
         }
     }
 
@@ -342,16 +350,19 @@ impl<T> Watcher<T> {
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
     pub fn watch(&self) -> Result<(), Disconnected> {
-        match self.create_listener_if_needed() {
-            Ok(listener) => {
-                listener.wait();
-                if self.is_current() {
-                    return Err(Disconnected);
+        loop {
+            match self.create_listener_if_needed() {
+                Ok(listener) => {
+                    listener.wait();
+                    if !self.is_current() {
+                        break;
+                    }
                 }
+                Err(CreateListenerError::Disconnected) => return Err(Disconnected),
+                Err(CreateListenerError::NewValueAvailable) => break,
             }
-            Err(CreateListenerError::Disconnected) => return Err(Disconnected),
-            Err(CreateListenerError::NewValueAvailable) => {}
         }
+
         Ok(())
     }
 
@@ -368,21 +379,7 @@ impl<T> Watcher<T> {
     /// - [`TimeoutError::Timeout`]: A timeout occurred before a new value was
     /// written.
     pub fn watch_timeout(&self, duration: Duration) -> Result<(), TimeoutError> {
-        match self.create_listener_if_needed() {
-            Ok(listener) => {
-                if listener.wait_timeout(duration) {
-                    if self.is_current() {
-                        Err(TimeoutError::Disconnected)
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(TimeoutError::Timeout)
-                }
-            }
-            Err(CreateListenerError::Disconnected) => Err(TimeoutError::Disconnected),
-            _ => Ok(()),
-        }
+        self.watch_until(Instant::now() + duration)
     }
 
     /// Watches for a new value to be stored in the source [`Watchable`]. If the
@@ -397,21 +394,25 @@ impl<T> Watcher<T> {
     /// - [`TimeoutError::Timeout`]: A timeout occurred before a new value was
     /// written.
     pub fn watch_until(&self, deadline: Instant) -> Result<(), TimeoutError> {
-        match self.create_listener_if_needed() {
-            Ok(listener) => {
-                if listener.wait_deadline(deadline) {
-                    if self.is_current() {
-                        Err(TimeoutError::Disconnected)
+        loop {
+            match self.create_listener_if_needed() {
+                Ok(listener) => {
+                    if listener.wait_deadline(deadline) {
+                        if !self.is_current() {
+                            break;
+                        } else if Instant::now() < deadline {
+                            // Spurious wake-up
+                        }
                     } else {
-                        Ok(())
+                        return Err(TimeoutError::Timeout);
                     }
-                } else {
-                    Err(TimeoutError::Timeout)
                 }
+                Err(CreateListenerError::Disconnected) => return Err(TimeoutError::Disconnected),
+                Err(CreateListenerError::NewValueAvailable) => break,
             }
-            Err(CreateListenerError::Disconnected) => Err(TimeoutError::Disconnected),
-            _ => Ok(()),
         }
+
+        Ok(())
     }
 
     /// Watches for a new value to be stored in the source [`Watchable`]. If the
@@ -424,15 +425,17 @@ impl<T> Watcher<T> {
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
     pub async fn watch_async(&self) -> Result<(), Disconnected> {
-        match self.create_listener_if_needed() {
-            Ok(listener) => {
-                listener.await;
-                if self.is_current() {
-                    return Err(Disconnected);
+        loop {
+            match self.create_listener_if_needed() {
+                Ok(listener) => {
+                    listener.await;
+                    if !self.is_current() {
+                        break;
+                    }
                 }
+                Err(CreateListenerError::Disconnected) => return Err(Disconnected),
+                Err(CreateListenerError::NewValueAvailable) => break,
             }
-            Err(CreateListenerError::Disconnected) => return Err(Disconnected),
-            Err(CreateListenerError::NewValueAvailable) => {}
         }
         Ok(())
     }
@@ -548,31 +551,32 @@ where
     ) -> Poll<Option<Self::Item>> {
         // If we have a listener or we have already read the current value, we
         // need to poll the listener as a future first.
-        match self
-            .listener
-            .take()
-            .ok_or(CreateListenerError::Disconnected)
-            .or_else(|_| self.watcher.create_listener_if_needed())
-        {
-            Ok(mut listener) => {
-                match listener.poll_unpin(cx) {
-                    Poll::Ready(_) => {
-                        if self.watcher.version == self.watcher.watched.current_version() {
-                            // Disconnected
-                            return Poll::Ready(None);
-                        }
+        loop {
+            match self
+                .listener
+                .take()
+                .ok_or(CreateListenerError::Disconnected)
+                .or_else(|_| self.watcher.create_listener_if_needed())
+            {
+                Ok(mut listener) => {
+                    match listener.poll_unpin(cx) {
+                        Poll::Ready(_) => {
+                            if !self.watcher.is_current() {
+                                break;
+                            }
 
-                        // A new value is available. Fall through.
-                    }
-                    Poll::Pending => {
-                        // The listener wasn't ready, store it again.
-                        self.listener = Some(listener);
-                        return Poll::Pending;
+                            // A new value is available. Fall through.
+                        }
+                        Poll::Pending => {
+                            // The listener wasn't ready, store it again.
+                            self.listener = Some(listener);
+                            return Poll::Pending;
+                        }
                     }
                 }
+                Err(CreateListenerError::NewValueAvailable) => break,
+                Err(CreateListenerError::Disconnected) => return Poll::Ready(None),
             }
-            Err(CreateListenerError::NewValueAvailable) => {}
-            Err(CreateListenerError::Disconnected) => return Poll::Ready(None),
         }
 
         Poll::Ready(Some(self.watcher.read().clone()))
