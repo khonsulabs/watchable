@@ -1,6 +1,6 @@
 [package]
 name = "watchable"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 description = "A watchable RwLock-like type that is compatible with both multi-threaded and async code."
 repository = "https://github.com/khonsulabs/watchable"
