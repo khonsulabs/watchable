@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- `Watcher<T>` now uses interior mutability via `AtomicUsize`. This allows a
+  watcher to be stored inside of a static variable and be used between multiple
+  threads without involving a mutex.
+
+### Fixes
+
+- `Watcher<T>` no longer requires `T` to be `Clone` for itself to be cloneable.
+
 ## v1.1.1
 
 ### Fixes

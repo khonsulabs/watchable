@@ -67,7 +67,7 @@ impl<T> Watchable<T> {
     pub fn watch(&self) -> Watcher<T> {
         self.data.watchers.fetch_add(1, Ordering::AcqRel);
         Watcher {
-            version: self.data.current_version(),
+            version: AtomicUsize::new(self.data.current_version()),
             watched: self.data.clone(),
         }
     }
@@ -260,16 +260,25 @@ where
 /// Cloning a watcher also clones the current watching state. If the watcher
 /// hasn't read the value currently stored, the cloned instance will also
 /// consider the current value unread.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[must_use]
 pub struct Watcher<T> {
-    version: usize,
+    version: AtomicUsize,
     watched: Arc<Data<T>>,
 }
 
 impl<T> Drop for Watcher<T> {
     fn drop(&mut self) {
         self.watched.watchers.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+impl<T> Clone for Watcher<T> {
+    fn clone(&self) -> Self {
+        Self {
+            version: AtomicUsize::new(self.version.load(Ordering::Relaxed)),
+            watched: self.watched.clone(),
+        }
     }
 }
 
@@ -321,7 +330,7 @@ impl<T> Watcher<T> {
     /// Returns true if the latest value has been read from this instance.
     #[must_use]
     pub fn is_current(&self) -> bool {
-        self.version == self.watched.current_version()
+        self.version.load(Ordering::Relaxed) == self.watched.current_version()
     }
 
     /// Updates this instance's state to reflect that it has read the currently
@@ -330,14 +339,21 @@ impl<T> Watcher<T> {
     ///
     /// Returns true if the internal state was updated, and false if no changes
     /// were necessary.
-    pub fn mark_read(&mut self) -> bool {
+    pub fn mark_read(&self) -> bool {
         let current_version = self.watched.current_version();
-        if self.version == current_version {
-            false
-        } else {
-            self.version = current_version;
-            true
+        let mut stored_version = self.version.load(Ordering::Acquire);
+        while stored_version < current_version {
+            match self.version.compare_exchange(
+                stored_version,
+                current_version,
+                Ordering::Release,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => return true,
+                Err(new_stored) => stored_version = new_stored,
+            }
         }
+        false
     }
 
     /// Watches for a new value to be stored in the source [`Watchable`]. If the
@@ -452,9 +468,10 @@ impl<T> Watcher<T> {
     /// This function marks the stored value as read, ensuring that the next
     /// call to a watch function will block until the a new value has been
     /// published.
-    pub fn read(&mut self) -> WatchableReadGuard<'_, T> {
+    pub fn read(&self) -> WatchableReadGuard<'_, T> {
         let guard = self.watched.value.read();
-        self.version = self.watched.current_version();
+        self.version
+            .store(self.watched.current_version(), Ordering::Relaxed);
         WatchableReadGuard(guard)
     }
 
@@ -462,7 +479,7 @@ impl<T> Watcher<T> {
     /// value as read, ensuring that the next call to a watch function will
     /// block until the a new value has been published.
     #[must_use]
-    pub fn get(&mut self) -> T
+    pub fn get(&self) -> T
     where
         T: Clone,
     {
@@ -478,7 +495,7 @@ impl<T> Watcher<T> {
     ///
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
-    pub fn next_value(&mut self) -> Result<T, Disconnected>
+    pub fn next_value(&self) -> Result<T, Disconnected>
     where
         T: Clone,
     {
@@ -497,7 +514,7 @@ impl<T> Watcher<T> {
     ///
     /// Returns [`Disconnected`] if all instances of [`Watchable`] have been
     /// dropped and the current value has been read.
-    pub async fn next_value_async(&mut self) -> Result<T, Disconnected>
+    pub async fn next_value_async(&self) -> Result<T, Disconnected>
     where
         T: Clone,
     {
@@ -587,8 +604,8 @@ where
 fn basics() {
     let watchable = Watchable::new(1_u32);
     assert!(!watchable.has_watchers());
-    let mut watcher1 = watchable.watch();
-    let mut watcher2 = watchable.watch();
+    let watcher1 = watchable.watch();
+    let watcher2 = watchable.watch();
     assert!(!watcher1.mark_read());
 
     assert_eq!(watchable.watchers(), 2);
@@ -619,17 +636,18 @@ fn accessing_values() {
     assert_eq!(&*watchable.read(), "hello");
     assert_eq!(&*watchable.write(), "hello");
 
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
     assert_eq!(watcher.get(), "hello");
     assert_eq!(&*watcher.read(), "hello");
 }
 
 #[test]
+#[allow(clippy::redundant_clone)]
 fn clones() {
     let watchable = Watchable::default();
     let cloned_watchable = watchable.clone();
-    let mut watcher1 = watchable.watch();
-    let mut watcher2 = watcher1.clone();
+    let watcher1 = watchable.watch();
+    let watcher2 = watcher1.clone();
 
     watchable.replace(1);
     assert_eq!(watcher1.next_value().unwrap(), 1);
@@ -643,7 +661,7 @@ fn clones() {
 fn drop_watchable() {
     let watchable = Watchable::default();
     assert!(!watchable.has_watchers());
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
 
     watchable.replace(1_u32);
     assert_eq!(watcher.next_value().unwrap(), 1);
@@ -716,7 +734,7 @@ fn timeouts() {
 #[test]
 fn deref_publish() {
     let watchable = Watchable::new(1_u32);
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
     // Reading the value (Deref) shouldn't publish a new value
     {
         let write_guard = watchable.write();
@@ -734,16 +752,19 @@ fn deref_publish() {
 #[test]
 fn blocking_tests() {
     let watchable = Watchable::new(1_u32);
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
     let worker_thread = std::thread::spawn(move || {
         watcher.watch().unwrap();
         assert_eq!(*watcher.read(), 2);
+        sender.send(()).unwrap();
         watcher.watch().unwrap();
         *watcher.read()
     });
 
     watchable.replace(2);
-    std::thread::sleep(Duration::from_millis(10));
+    // Wait for the thread to perform its read.
+    receiver.recv().unwrap();
     assert!(watchable.update(42).is_ok());
     assert!(watchable.update(42).is_err());
 
@@ -753,7 +774,7 @@ fn blocking_tests() {
 #[test]
 fn iterator_test() {
     let watchable = Watchable::new(1_u32);
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
     let worker_thread = std::thread::spawn(move || {
         let mut last_value = watcher.next_value().unwrap();
         for value in watcher {
@@ -777,7 +798,7 @@ async fn stream_test() {
     use futures_util::StreamExt;
 
     let watchable = Watchable::default();
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
     let worker_thread = tokio::task::spawn(async move {
         let mut last_value = watcher.next_value_async().await.unwrap();
         let mut stream = watcher.into_stream();
@@ -793,7 +814,7 @@ async fn stream_test() {
 
         // Convert back to a normal watcher and check that the state still
         // matches.
-        let mut watcher = stream.into_inner();
+        let watcher = stream.into_inner();
         assert!(!watcher.mark_read());
     });
 
@@ -816,7 +837,7 @@ fn stress_test() {
     let watchable = Watchable::new(1_u32);
     let mut workers = Vec::new();
     for _ in 1..=10 {
-        let mut watcher = watchable.watch();
+        let watcher = watchable.watch();
         workers.push(std::thread::spawn(move || {
             let mut last_value = *watcher.read();
             while watcher.watch().is_ok() {
@@ -844,7 +865,7 @@ async fn stress_test_async() {
     let watchable = Watchable::new(1_u32);
     let mut workers = Vec::new();
     for _ in 1..=64 {
-        let mut watcher = watchable.watch();
+        let watcher = watchable.watch();
         workers.push(tokio::task::spawn(async move {
             let mut last_value = *watcher.read();
             loop {
@@ -875,7 +896,7 @@ async fn stress_test_async() {
 #[test]
 fn shutdown() {
     let watchable = Watchable::new(0);
-    let mut watcher = watchable.watch();
+    let watcher = watchable.watch();
 
     // Set a new value, then shutdown
     watchable.replace(1);
