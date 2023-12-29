@@ -1,6 +1,6 @@
 [package]
 name = "watchable"
-version = "1.1.1"
+version = "1.1.2"
 edition = "2021"
 description = "A watchable RwLock-like type that is compatible with both multi-threaded and async code."
 repository = "https://github.com/khonsulabs/watchable"
@@ -8,10 +8,11 @@ license = "MIT OR Apache-2.0"
 keywords = ["asynchronous", "async", "thread", "mpmc"]
 categories = ["concurrency", "data-structures", "asynchronous"]
 readme = "./README.md"
-rust-version = "1.58"
+rust-version = "1.64"
+include = ["/src", "/src/*.md", "examples", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-event-listener = "2.5.2"
+event-listener = "4.0.1"
 parking_lot = "0.12.0"
 futures-util = "0.3.21"
 thiserror = "1.0.30"

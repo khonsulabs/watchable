@@ -12,6 +12,7 @@
 
 use std::{
     ops::{Deref, DerefMut},
+    pin::Pin,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -307,7 +308,7 @@ pub enum TimeoutError {
 }
 
 impl<T> Watcher<T> {
-    fn create_listener_if_needed(&self) -> Result<EventListener, CreateListenerError> {
+    fn create_listener_if_needed(&self) -> Result<Pin<Box<EventListener>>, CreateListenerError> {
         let changed = self.watched.changed.read();
         match (changed.as_ref(), self.is_current()) {
             (_, false) => Err(CreateListenerError::NewValueAvailable),
@@ -368,8 +369,8 @@ impl<T> Watcher<T> {
     pub fn watch(&self) -> Result<(), Disconnected> {
         loop {
             match self.create_listener_if_needed() {
-                Ok(listener) => {
-                    listener.wait();
+                Ok(mut listener) => {
+                    listener.as_mut().wait();
                     if !self.is_current() {
                         break;
                     }
@@ -412,8 +413,8 @@ impl<T> Watcher<T> {
     pub fn watch_until(&self, deadline: Instant) -> Result<(), TimeoutError> {
         loop {
             match self.create_listener_if_needed() {
-                Ok(listener) => {
-                    if listener.wait_deadline(deadline) {
+                Ok(mut listener) => {
+                    if listener.as_mut().wait_deadline(deadline).is_some() {
                         if !self.is_current() {
                             break;
                         } else if Instant::now() < deadline {
@@ -499,7 +500,7 @@ impl<T> Watcher<T> {
     where
         T: Clone,
     {
-        self.watch().map(|_| self.read().clone())
+        self.watch().map(|()| self.read().clone())
     }
 
     /// Watches for a new value to be stored in the source [`Watchable`] and
@@ -518,7 +519,7 @@ impl<T> Watcher<T> {
     where
         T: Clone,
     {
-        self.watch_async().await.map(|_| self.read().clone())
+        self.watch_async().await.map(|()| self.read().clone())
     }
 
     /// Returns this watcher in a type that implements [`Stream`].
@@ -546,7 +547,7 @@ where
 #[must_use]
 pub struct WatcherStream<T> {
     watcher: Watcher<T>,
-    listener: Option<EventListener>,
+    listener: Option<Pin<Box<EventListener>>>,
 }
 
 impl<T> WatcherStream<T> {
@@ -577,7 +578,7 @@ where
             {
                 Ok(mut listener) => {
                     match listener.poll_unpin(cx) {
-                        Poll::Ready(_) => {
+                        Poll::Ready(()) => {
                             if !self.watcher.is_current() {
                                 break;
                             }
