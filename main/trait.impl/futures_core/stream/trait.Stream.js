@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"watchable":[["impl&lt;T&gt; Stream for <a class=\"struct\" href=\"watchable/struct.WatcherStream.html\" title=\"struct watchable::WatcherStream\">WatcherStream</a>&lt;T&gt;<span class=\"where fmt-newline\">where\n    T: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.75.0/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a>,</span>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
